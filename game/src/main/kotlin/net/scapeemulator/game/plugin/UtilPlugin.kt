@@ -54,6 +54,8 @@ fun spawnBots(world: World) {
         mostRecentDirection = Direction.NORTH
         settings.autoRetaliating = true
         appearance = generateAppearance(Gender.MALE)
+
+//        event.player.inventory.add(Item(1042)) //bluephat
         equipment.add(Item(4732), Equipment.HEAD)
         equipment.add(Item(4736), Equipment.BODY)
         equipment.add(Item(4738), Equipment.LEGS)
@@ -92,7 +94,7 @@ class Stats(val player: Player) {
         add(13, "${YELLOW}Clipping: ${if (player.clipping) "${GREEN}enabled" else "${RED}disabled"}") {
             clipping = !clipping
         }
-        add(14, "${YELLOW}Region: ${player.position.regionId}") {}
+        add(14, "${YELLOW}Region: ${player.position.regionId} : ${GameServer.WORLD.region.regions.size}") {}
         add(15, "${YELLOW}SkullIcon: ${player.settings.skullIcon}") {
             displayEnterPrompt("skull: 1-7", RunScriptType.INT) { value ->
                 player.settings.skullIcon = (value as Long).toInt()
@@ -146,10 +148,13 @@ val UtilPlugin: (World) -> PluginHandler = { world ->
             event.player.clipping = false
 //            event.player.statsTab()
             Stats(event.player).display()
+
+            //todo fix partyhats
+            event.player.inventory.add(Item(1038)) //redphat
+            event.player.inventory.add(Item(1042)) //bluephat
+            event.player.equipment.add(Item(10742), Equipment.LEGS)//flared
         }
-
         if (event is MessageEvent) Stats(event.player).handle(event)
-
     }, arrayOf(
         CommandHandler("bandos") { player, args ->
             player.equipment.add(Item(11335), Equipment.HEAD)
@@ -182,6 +187,9 @@ val UtilPlugin: (World) -> PluginHandler = { world ->
             player.sendMessage("TileCoords: $tileX $tileY")
             player.sendMessage("Region: ${player.position.regionId}")
             player.sendMessage("Objects: ${region.getRegion(player.position)?.getObjects()?.size}")
+            region.regions.filterNotNull().forEach { r ->
+                player.sendMessage("${region.regions.indexOf(r)}")
+            }
         }, CommandHandler("obj") { player, args ->
             if (args.size != 1) {
                 player.sendMessage("Syntax ::obj [id]")
@@ -210,7 +218,7 @@ val UtilPlugin: (World) -> PluginHandler = { world ->
         }, CommandHandler("pos") { player, args ->
 //                val localX = x - ((x shr 6) shl 6)
 //                val localY = x - ((x shr 6) shl 6)
-            player.sendMessage("LocalX: ")
+            player.sendMessage("${player.position}")
             player.sendMessage("")
             player.sendMessage("")
             player.sendMessage("")
@@ -218,23 +226,29 @@ val UtilPlugin: (World) -> PluginHandler = { world ->
             player.clipping = !player.clipping
             player.sendMessage("Clipping ${player.clipping}")
         }, CommandHandler("drop") { player, arguments ->
-            val dp = arrayOf(
-                Position(3225, 3225),
-                Position(3224, 3224),
-                Position(3223, 3223),
-                Position(3222, 3222),
-                Position(3221, 3221),
-                Position(3220, 3220),
-                Position(3219, 3219),
-            )
-            val di = emptyArray<GroundItem>().toMutableList()
-            dp.onEach { di.add(GroundItem(995, 1000000, it, player)) }
-            di.onEach {
-                it.expire = (5..10).random()
-                it.worldVisibility = true
-//                    it.remainPrivate = true
-                world.items.create(it)
-            }
+            val x = player.position.x
+            val y = player.position.y
+            for (i in 0..20) for (i2 in 0..20)
+                world.items.create(GroundItem(995, 99.m(), Position(x + i, y + i2)))
+
+
+//            val dp = arrayOf(
+//                Position(3225, 3225),
+//                Position(3224, 3224),
+//                Position(3223, 3223),
+//                Position(3222, 3222),
+//                Position(3221, 3221),
+//                Position(3220, 3220),
+//                Position(3219, 3219),
+//            )
+//            val di = emptyArray<GroundItem>().toMutableList()
+//            dp.onEach { di.add(GroundItem(995, 1000000, it, player)) }
+//            di.onEach {
+//                it.expire = (5..10).random()
+//                it.worldVisibility = true
+////                    it.remainPrivate = true
+//                world.items.create(it)
+//            }
 //                val coins = GroundItem(995, 1000000, player.position, player)
 ////                coins.private = true
 //                coins.expire = 5

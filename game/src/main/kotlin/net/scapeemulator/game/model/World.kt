@@ -33,7 +33,7 @@ class World(val worldId: Int, private val loginService: LoginService) : SyncTask
         for (player in players){
             if(player == null) continue
             val r = region.getRegion(player.position)
-            r?.mobs?.set()
+//            r?.mobs?.set()
         }
         for (npc in npcs){
             if(npc==null) continue

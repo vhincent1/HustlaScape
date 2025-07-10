@@ -71,6 +71,20 @@ class Player : Mob() {
         init()
     }
 
+    private fun init() {
+        skillSet.addListener(SkillMessageListener(this))
+        skillSet.addListener(SkillAppearanceListener(this))
+        inventory.addListener(InventoryMessageListener(this, 149, 0, 93))
+        inventory.addListener(InventoryFullListener(this, "inventory"))
+        bank.addListener(InventoryFullListener(this, "bank"))
+        equipment.addListener(InventoryMessageListener(this, 387, 28, 94))
+        equipment.addListener(InventoryFullListener(this, "equipment"))
+        equipment.addListener(InventoryAppearanceListener(this))
+    }
+
+    fun send(message: Message): ChannelFuture? = session?.send(message)
+    fun sendMessage(text: String) = send(ServerMessage(text))
+
     override fun login() {
         //online = true
         /* set up player for their initial region change */
@@ -90,19 +104,6 @@ class Player : Mob() {
         energy = energy // TODO: nicer way than this?
     }
 
-    private fun init() {
-        skillSet.addListener(SkillMessageListener(this))
-        skillSet.addListener(SkillAppearanceListener(this))
-        inventory.addListener(InventoryMessageListener(this, 149, 0, 93))
-        inventory.addListener(InventoryFullListener(this, "inventory"))
-        bank.addListener(InventoryFullListener(this, "bank"))
-        equipment.addListener(InventoryMessageListener(this, 387, 28, 94))
-        equipment.addListener(InventoryFullListener(this, "equipment"))
-        equipment.addListener(InventoryAppearanceListener(this))
-    }
-
-    fun send(message: Message): ChannelFuture? = session?.send(message)
-    fun sendMessage(text: String) = send(ServerMessage(text))
     override fun logout() {
         // TODO this seems fragile
         val future = send(LogoutMessage())

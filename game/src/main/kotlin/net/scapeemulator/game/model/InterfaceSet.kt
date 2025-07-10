@@ -27,7 +27,8 @@ class InterfaceSet(val player: Player) {
     }
 
     enum class DisplayMode {
-        FIXED, RESIZABLE
+        /*sd*/FIXED,
+        /*hd*/RESIZABLE
     }
 
     private val tabs = IntArray(15)

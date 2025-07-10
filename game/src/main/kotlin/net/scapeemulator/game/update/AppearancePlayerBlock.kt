@@ -19,8 +19,7 @@ class AppearancePlayerBlock(val player: Player) : PlayerBlock(0x4) {
     override fun encode(message: PlayerUpdateMessage, builder: GameFrameBuilder) {
         val gender = appearance.gender
         val propertiesBuilder = GameFrameBuilder(builder.allocator)
-        /*
-		 * flags field:
+        /*   flags field:
 		 *   bit 0   - gender (0 = male, 1 = female)
 		 *   bit 1   - unused
 		 *   bit 2   - show skill level instead of combat level
@@ -59,6 +58,7 @@ class AppearancePlayerBlock(val player: Player) : PlayerBlock(0x4) {
         } else {
             propertiesBuilder.put(DataType.BYTE, 0)
         }
+
 
         item = equipment.get(Equipment.BODY)
         if (item != null) {
@@ -127,7 +127,7 @@ class AppearancePlayerBlock(val player: Player) : PlayerBlock(0x4) {
             propertiesBuilder.put(DataType.BYTE, 0)
         }
         Colour.entries.forEach { propertiesBuilder.put(DataType.BYTE, appearance.getColor(it)) }
-        propertiesBuilder.put(DataType.SHORT, stance) // todo: weapon stance
+        propertiesBuilder.put(DataType.SHORT, stance)
         propertiesBuilder.put(DataType.LONG, Base37Utils.encodeBase37(username))
         propertiesBuilder.put(DataType.BYTE, combat) //combat level
         if ((flags and 0x4) != 0) {

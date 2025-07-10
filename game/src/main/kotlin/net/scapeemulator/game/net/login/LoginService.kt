@@ -15,10 +15,10 @@ class LoginService(private val serializer: PlayerSerializer) : Runnable {
     //todo fix login
     private class SessionPlayerPair(val session: LoginSession, val player: Player)
 
-    private val jobs: BlockingQueue<Job> = LinkedBlockingDeque<Job>()
+    private val jobs: BlockingQueue<Job> = LinkedBlockingDeque()
     private val connectionList = arrayListOf<String>()
-    private val newPlayers: Queue<SessionPlayerPair> = ArrayDeque<SessionPlayerPair>()
-    private val oldPlayers: Queue<Player> = ArrayDeque<Player>()
+    private val newPlayers: Queue<SessionPlayerPair> = ArrayDeque()
+    private val oldPlayers: Queue<Player> = ArrayDeque()
 
     fun addLoginRequest(session: LoginSession, request: LoginRequest) = jobs.add(LoginJob(session, request))
     fun addLogoutRequest(player: Player) = synchronized(oldPlayers) { oldPlayers.add(player) }
@@ -84,7 +84,6 @@ class LoginService(private val serializer: PlayerSerializer) : Runnable {
 ////                connectionList.remove((player.session.channel.remoteAddress() as InetSocketAddress).address.toString())
 //            jobs.add(LogoutJob(player))
 //        }
-
         if (oldPlayers.isEmpty()) return@synchronized
         oldPlayers.onEach { player ->
             println("Logging out ${player.username}")
@@ -107,12 +106,10 @@ class LoginService(private val serializer: PlayerSerializer) : Runnable {
     }
 
     override fun run() {
-        while (true) {
-            try {
-                jobs.take().perform(this)
-            } catch (e: InterruptedException) {
-                /* ignore */
-            }
+        while (true) try {
+            jobs.take().perform(this)
+        } catch (e: InterruptedException) {
+            /* ignore */
         }
     }
 
@@ -124,7 +121,6 @@ class LoginService(private val serializer: PlayerSerializer) : Runnable {
         override fun perform(service: LoginService) {
             val result = service.serializer.load(request.username, request.password)
             val status = result.status
-
             if (status != LoginResponse.STATUS_OK) {
                 /* send failure response immediately */
                 session.sendLoginFailure(status)

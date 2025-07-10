@@ -7,9 +7,7 @@ import kotlinx.cli.required
 import net.scapeemulator.cache.Cache
 import net.scapeemulator.cache.ChecksumTable
 import net.scapeemulator.cache.FileStore
-import net.scapeemulator.game.cache.LandscapeKeyTable
-import net.scapeemulator.game.cache.MapSet
-import net.scapeemulator.game.cache.ObjectDefinitions
+import net.scapeemulator.game.cache.*
 import net.scapeemulator.game.io.DummyPlayerSerializer
 import net.scapeemulator.game.io.JdbcPlayerSerializer
 import net.scapeemulator.game.io.PlayerSerializer
@@ -67,14 +65,15 @@ class GameServer(worldId: Int, loginAddress: SocketAddress) {
 
     init {
         logger.info { "Starting ScapeEmulator game server..." }
+        val config = config()
         // todo: world list and game settings
         /* load landscape keys */
-        landscapeKeyTable = LandscapeKeyTable.open("data/landscape-keys")
+        landscapeKeyTable = LandscapeKeyTable.open(config.landscapePath)
         /* load game cache */
-        cache = Cache(FileStore.open("data/cache"))
+        cache = Cache(FileStore.open(config.cachePath))
         checksumTable = cache.createChecksumTable()
         /* load item definitions */
-        ItemDefinitions.init(File("./data/itemDefinitions.json"))
+        ItemDefinitions.init(File(config.itemDefsPath))
         EquipmentDefinition.init()
         ObjectDefinitions.init(cache)
         NPCDefinitions.init(cache)
@@ -83,16 +82,18 @@ class GameServer(worldId: Int, loginAddress: SocketAddress) {
         codecRepository = CodecRepository(landscapeKeyTable)
         messageDispatcher = MessageDispatcher()
         /* load player serializer from config file */
-        val serializer = createPlayerSerializer()
+        val serializer = config.playerSerializer
         logger.info { "Using serializer: $serializer." }
         loginService = LoginService(serializer)
         updateService = UpdateService()
         /* load world */
         world = World(worldId, loginService)
-        /* load map */
-//        map.addListener(RegionMapListener(world.region))
-//        map.addListener(TraversalMapListener(world.traversalMap))
-//        map.init(cache, landscapeKeyTable)
+        if (config.pathfinding) {
+            /* load map */
+            map.addListener(RegionMapListener(world.region))
+            map.addListener(TraversalMapListener(world.traversalMap))
+            map.init(cache, landscapeKeyTable)
+        }
         /* load plugins */
         plugins = PluginManager(this)
         /* start netty */
@@ -147,29 +148,43 @@ class GameServer(worldId: Int, loginAddress: SocketAddress) {
         //game.shutdown() //save players
     }
 
+    class Config {
+        lateinit var cachePath: String
+        lateinit var landscapePath: String
+        lateinit var playerSerializer: PlayerSerializer
+        lateinit var itemDefsPath: String
+        var pathfinding: Boolean = true
+    }
+
     @Throws(IOException::class, SQLException::class)
-    private fun createPlayerSerializer(): PlayerSerializer {
+    private fun config(): Config {
         val properties = Properties()
         FileInputStream("data/serializer.conf").use { properties.load(it) }
+        val config = Config()
+        /*player serializer*/
         val type = properties["type"] as String?
         when (type) {
-            "dummy" -> return DummyPlayerSerializer()
+            "dummy" -> config.playerSerializer = DummyPlayerSerializer()
             "jdbc" -> {
                 val url = properties["url"] as String
                 val username = properties["username"] as String
                 val password = properties["password"] as String
-                return JdbcPlayerSerializer(url, username, password)
+                config.playerSerializer = JdbcPlayerSerializer(url, username, password)
             }
 
             else -> throw IOException("unknown serializer type")
         }
+        config.cachePath = properties["cachePath"] as String
+        config.landscapePath = properties["landscapeKeysPath"] as String
+        config.itemDefsPath = properties["itemDefs"] as String
+        config.pathfinding = (properties["pathfinding"] as String).toBoolean()
+        return config
     }
 
     companion object {
         private val logger = KotlinLogging.logger {}
         lateinit var INSTANCE: GameServer
         lateinit var WORLD: World
-
         @JvmStatic
         fun main(args: Array<String>) {
             val parser = ArgParser("GameServer")
@@ -194,14 +209,12 @@ class GameServer(worldId: Int, loginAddress: SocketAddress) {
             parser.parse(args)
             try {
                 INSTANCE = GameServer(world, InetSocketAddress(NetworkConstants.LOGIN_PORT))
-
                 /* start server */
                 INSTANCE.apply {
                     start()
                     network.start(gamePort, httpPort)
                     WORLD = this.world
                 }
-
                 /* shutdown hook */
                 Runtime.getRuntime().addShutdownHook(Thread { INSTANCE.shutdown() })
             } catch (t: Throwable) {

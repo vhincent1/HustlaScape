@@ -7,5 +7,6 @@ class AudioManager {
 
     fun send(sound: Audio, global: Boolean = false) {
         //regionmanager.getlocalplayers MapDistance.SOUND.getDistance()
+//        GameServer.WORLD.region.
     }
 }

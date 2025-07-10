@@ -23,12 +23,36 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 
 class Region {
+    companion object {
+        const val REGION_SIZE: Int = 64
+        const val MAXIMUM_PLANE: Int = 4
+    }
+
     private val tiles: Array<Array<Tile?>> = Array(MAXIMUM_PLANE) { arrayOfNulls(REGION_SIZE * REGION_SIZE) }
     private val objects: MutableMap<Position, GameObject> = HashMap<Position, GameObject>()
     private val mobs = CopyOnWriteArrayList<Mob>()
 
-    fun add(mob: Mob) {
-        mobs.add(mob)
+    fun add(mob: Mob) = mobs.add(mob)
+    fun remove(mob: Mob) {
+        mobs.remove(mob)
+    }
+
+    fun sync() {
+
+    }
+
+    /**
+     * Represents one of the 4 planes of a region.
+     * @author Emperor
+     */
+    class RegionPlane {
+        companion object {
+            const val REGION_SIZE = 64
+            const val CHUNK_SIZE = REGION_SIZE shl 3
+        }
+
+        constructor(plane: Int, region: Region)
+
     }
 
     /**
@@ -47,28 +71,33 @@ class Region {
 
     fun getObject(position: Position): GameObject? = objects[position]
     fun getObjects(): Collection<GameObject> = Collections.unmodifiableCollection(objects.values)
-
-    companion object {
-        const val REGION_SIZE: Int = 64
-        const val MAXIMUM_PLANE: Int = 4
-    }
 }
 
 class RegionManager {
+    companion object {
+        /**
+         * The size of one side of the region array.
+         */
+        const val SIZE: Int = 256
+    }
+
     /**
      * The regions for the traversal data.
      */
     internal val regions: Array<Region?> = arrayOfNulls(SIZE * SIZE)
 
     fun getRegion(position: Position): Region? {
-        val id = ((position.x shr 6) shl 8) or (position.y shr 6)
         val region = getRegion(position.x, position.y)
         if (region == null) initializeRegion(position)
         return region
     }
 
-    //traversal map
-    fun getRegion(x: Int, y: Int): Region? = regions[(x shr 6) + (y shr 6) * SIZE]
+    //traversal map todo check
+    fun getRegion(x: Int, y: Int): Region? {
+//        regions[(x shr 6) + (y shr 6) * SIZE]
+        val regionId = ((x shr 6) shl 8) or (y shr 6)
+        return regions[regionId]
+    }
 
     /**
      * Initializes the region at the specified coordinates.
@@ -78,18 +107,21 @@ class RegionManager {
         /* Calculate the coordinates */
         val regionX: Int = position.x shr 6
         val regionY: Int = position.y shr 6
-        regions[regionX + regionY * SIZE] = Region()
+//        regions[regionX + regionY * SIZE] = Region()
+        regions[position.regionId] = Region()
     }
 
     /**
      * Gets if the set contains a region for the specified coordinates.
      */
     fun isRegionInitialized(position: Position): Boolean {
+        val regionId = ((position.x shr 6) shl 8) or (position.y shr 6)
         /* Calculate the coordinates */
         val regionX: Int = position.x shr 6
         val regionY: Int = position.y shr 6
         /* Get if the region is not null */
-        return regions[regionX + regionY * SIZE] != null
+//        return regions[regionX + regionY * SIZE] != null
+        return regions[regionId] != null
     }
 
 //    fun isTeleportPermitted(position: Position): Boolean {
@@ -99,10 +131,12 @@ class RegionManager {
 //        return (flag and 0x12c0102) == 0 || ((flag and 0x12c0108) == 0) || ((flag and 0x12c0120) == 0) || ((flag and 0x12c0180) == 0)
 //    }
 
-    companion object {
-        /**
-         * The size of one side of the region array.
-         */
-        const val SIZE: Int = 256
+    fun move(mob: Mob) {
+        val regionId = mob.position.regionId
+        val z: Int = mob.position.height
+
+        val region = getRegion(mob.position) ?: return
+        region.remove(mob)
+        region.add(mob)
     }
 }

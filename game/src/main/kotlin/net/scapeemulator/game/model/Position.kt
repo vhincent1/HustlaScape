@@ -1,12 +1,20 @@
 package net.scapeemulator.game.model
 
 data class Position(val x: Int, val y: Int, val height: Int = 0) {
+
+    companion object{
+        //distance
+        const val SCENE = 51
+        const val RENDERING=15
+        const val SOUND=5
+    }
+
     val regionId: Int get() = (x shr 6) shl 8 or (y shr 6)
     val centralRegionX: Int get() = x / 8//x shr 3
     val centralRegionY: Int get() = y / 8//y shr 3
     val packed:/*script message*/ Int get() = (height shl 28) or (x shl 14) or y
 
-    fun isWithinDistance(position: Position, distance: Int = 15): Boolean {
+    fun isWithinDistance(position: Position, distance: Int = RENDERING): Boolean {
         if (height != position.height) return false
         val deltaX: Int = position.x - x
         val deltaY: Int = position.y - y
@@ -20,7 +28,7 @@ data class Position(val x: Int, val y: Int, val height: Int = 0) {
         return deltaX <= dist && deltaX >= -dist && deltaY <= dist && deltaY >= -dist
     }
 
-    fun isWithinScene(position: Position): Boolean = isWithinDistance(position, 51)
+    fun isWithinScene(position: Position): Boolean = isWithinDistance(position, SCENE)
     fun blockHash(): Int = (x and 0x7) shl 4 or (y and 0x7)
     fun getRegionX(position: Position): Int = x - ((position.centralRegionX - 6) shl 3)
     fun getRegionY(position: Position): Int = y - ((position.centralRegionY - 6) * 8)

@@ -19,16 +19,10 @@ object Equipment {
     fun remove(player: Player, slot: Int) {
         val inventory = player.inventory
         val equipment = player.equipment
-
-        val item = equipment.get(slot)
-        if (item == null) return
-
+        val item = equipment.get(slot) ?: return
         val remaining = inventory.add(item)
         equipment.set(slot, remaining)
-
-        if (slot == WEAPON && remaining == null) {
-            weaponChanged(player)
-        }
+        if (slot == WEAPON && remaining == null) weaponChanged(player)
     }
 
     fun equip(player: Player, slot: Int) {
@@ -36,25 +30,19 @@ object Equipment {
         val equipment = player.equipment
         val originalWeapon = equipment.get(WEAPON)
         val lastSlot = slot
-
         val item = inventory.get(slot) ?: return
         val def = item.definition ?: return
-
         val targetSlot = def.equipmentSlot
         val unequipShield = def.equipmentSlot == WEAPON
                 && def.isTwoHand && equipment.get(SHIELD) != null
-        val unequipWeapon =
-            targetSlot == SHIELD && equipment.get(WEAPON) != null
-                    && equipment.get(WEAPON)!!.definition!!.isTwoHand
+        val unequipWeapon = targetSlot == SHIELD && equipment.get(WEAPON) != null
+                && equipment.get(WEAPON)!!.definition!!.isTwoHand
 
         /* ammo */
         val topUpStack = def.stackable && item.id == equipment.get(targetSlot)?.id
-        val drainStack =
-            equipment.get(targetSlot) != null
-                    && equipment.get(targetSlot)!!.definition!!.stackable
-                    && inventory.contains(
-                equipment.get(targetSlot)!!.id
-            )
+        val drainStack = equipment.get(targetSlot) != null
+                && equipment.get(targetSlot)!!.definition!!.stackable
+                && inventory.contains(equipment.get(targetSlot)!!.id)
 
         if ((unequipShield || unequipWeapon) && inventory.freeSlots() == 0) {
             inventory.fireCapacityExceeded()
@@ -74,9 +62,7 @@ object Equipment {
             }
             inventory.remove(item, slot)
             val other = equipment.get(targetSlot)
-            if (other != null) {
-                inventory.add(other, lastSlot)
-            }
+            if (other != null) inventory.add(other, lastSlot)
             equipment.set(targetSlot, item)
         }
 
@@ -97,9 +83,7 @@ object Equipment {
         else if (originalWeapon != null && weapon != null && originalWeapon.id != weapon.id)
             weaponChanged = true
 
-        if (weaponChanged) {
-            weaponChanged(player)
-        }
+        if (weaponChanged) weaponChanged(player)
     }
 
     private fun weaponChanged(player: Player) {
@@ -114,19 +98,23 @@ object Equipment {
     fun openAttackTab(player: Player) {
         val weapon = player.equipment.get(WEAPON)
         val def = weapon?.definition
-
         val name: String
         val weaponClass: WeaponClass
         if (weapon != null && def != null) {
             name = def.name
             weaponClass = def.getWeaponClass()
-            player.send(InterfaceConfigMessage(weaponClass.tab, if (weaponClass.attackStyles.size > 3) 12 else 10, def.hasSpecial))
+            player.send(
+                InterfaceConfigMessage(
+                    weaponClass.tab,
+                    if (weaponClass.attackStyles.size > 3) 12 else 10,
+                    def.hasSpecial
+                )
+            )
         } else {
             name = "Unarmed"
             weaponClass = WeaponClass.UNARMED
         }
         player.settings.weaponClass = weaponClass
-
         val tab = weaponClass.tab
         player.interfaceSet.openTab(Tab.ATTACK, tab)
         player.send(InterfaceTextMessage(tab, 0, name))
